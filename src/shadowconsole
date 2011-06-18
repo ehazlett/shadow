@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+ 
+import os
+import sys
+import subprocess
+import argparse
+from shadow import Shadow
+import logging
+
+class Manager(object):
+    def __init__(self, *args, **kwargs):
+        if 'rootfs_dir' in kwargs:
+            rootfs_dir = kwargs['rootfs_dir']
+        else:
+            rootfs_dir = '/'
+        if 'kernel_dir' in kwargs:
+            kernel_dir = kwargs['kernel_dir']
+        else:
+            kernel_dir = '/boot'
+        if 'snapshot_dir' in kwargs:
+            snapshot_dir = kwargs['snapshot_dir']
+        else:
+            snapshot_dir = '/.shadow'
+        if 'debug' in kwargs:
+            debug = kwargs['debug']
+        else:
+            debug = False
+        self.shadow = Shadow(rootfs_dir=rootfs_dir, kernel_dir=kernel_dir, snapshot_dir=snapshot_dir, debug=debug)
+        self.log = logging.getLogger('manager')
+
+    def do_snapshot(self):
+        self.log.debug('Taking snapshot')
+        snap_id = self.shadow.take_snapshot()
+
+    def list_snapshots(self):
+        snaps = self.shadow.get_snapshots()
+        if not snaps:
+            print('There are no shadow snapshots available.')
+        else:
+            print('\n'.join(snaps))
+
+    def activate_snapshot(self, snapshot_id=None):
+        self.shadow.activate_snapshot(snapshot_id)
+
+    def remove_snapshot(self, snapshot_id=None):
+        self.shadow.remove_snapshot(snapshot_id)
+
+def is_root():
+    if os.geteuid() == 0:
+        return True
+    else:
+        logging.error('You must be root')
+        return False
+
+if __name__=='__main__':
+    parser = argparse.ArgumentParser(description='Volume management for btrfs')
+    parser.add_argument('--rootfs-dir', dest='rootfs_dir', help="Path to root fs")
+    parser.add_argument('--snapshot', action='store_true', help="Take a snapshot of the current kernels and filesystem")
+    parser.add_argument('--list-snapshots', action='store_true', help="List all snapshots")
+    parser.add_argument('--activate-snapshot', dest='activate_snapshot', help="Activate snapshot (reboot required)")
+    parser.add_argument('--remove-snapshot', dest='remove_snapshot', help="Remove snapshot")
+    parser.add_argument('--debug', action='store_true', help="Output debug information")
+    
+    args = parser.parse_args()
+    
+    if args.debug:
+        debug = True
+    else:
+        debug = False
+
+    if args.list_snapshots:
+        m = Manager(debug=debug)
+        m.list_snapshots()
+        sys.exit(0)
+
+    if args.activate_snapshot:
+        if not is_root():
+            sys.exit(1)
+        m = Manager(debug=debug)
+        m.activate_snapshot(args.activate_snapshot)
+        sys.exit(0)
+
+    if args.remove_snapshot:
+        if not is_root():
+            sys.exit(1)
+        m = Manager(debug=debug)
+        m.remove_snapshot(args.remove_snapshot)
+        sys.exit(0)
+
+    if args.snapshot:
+        # check for root privleges
+        if not is_root():
+            sys.exit(1)
+        if args.rootfs_dir:
+            m = Manager(rootfs_dir=args.rootfs_dir, debug=debug)
+        else:
+            m = Manager(debug=debug)
+        m.do_snapshot()
+        sys.exit(0)
+
+    # no args; show help
+    parser.print_help()

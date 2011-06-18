@@ -1,0 +1,52 @@
+:: Shadow ::
+
+Shadow is a snapshot management utility for the btrfs filesystem.  You can use it in 
+tandem with package managers (such as pacman for Arch linux) to provide restore 
+snapshots (similar to what Yum does for Fedora).
+
+** btrfs on / is required
+
+Shadow will snapshot all kernels/initrds as well as the root (/) filesystem for later
+recovery.
+
+Installation
+-------------
+
+Download and extract (or clone) and run:
+
+python setup.py install
+
+OR
+
+pip install shadow
+
+
+Usage
+------
+
+View options and help:
+
+shadowconsole --help
+
+
+List snapshots (shadow only):
+
+shadowconsole --list-snapshots
+
+
+Create a snapshot:
+
+shadowconsole --snapshot
+
+
+Activate a snapshot:
+
+shadowconsole --activate-snapshot <snapshot_id>
+
+
+Remove a snapshot:
+
+shadowconsole --remove-snapshot <snapshot_id>
+
+
+
