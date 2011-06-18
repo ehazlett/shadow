@@ -43,6 +43,9 @@ class Manager(object):
     def activate_snapshot(self, snapshot_id=None):
         self.shadow.activate_snapshot(snapshot_id)
 
+    def activate_default_subvolume(self):
+        self.activate_snapshot(0)
+
     def remove_snapshot(self, snapshot_id=None):
         self.shadow.remove_snapshot(snapshot_id)
 
@@ -62,6 +65,7 @@ if __name__=='__main__':
     parser.add_argument('--snapshot', action='store_true', help="Take a snapshot of the current kernels and filesystem")
     parser.add_argument('--list-snapshots', action='store_true', help="List all snapshots")
     parser.add_argument('--activate-snapshot', dest='activate_snapshot', help="Activate snapshot (reboot required)")
+    parser.add_argument('--activate-default', action='store_true', help="Activate default (root) subvolume (no snapshots)")
     parser.add_argument('--remove-snapshot', dest='remove_snapshot', help="Remove snapshot")
     parser.add_argument('--debug', action='store_true', help="Output debug information")
     parser.add_argument('--version', action='store_true', help="Show version")
@@ -80,6 +84,13 @@ if __name__=='__main__':
     if args.list_snapshots:
         m = Manager(debug=debug)
         m.list_snapshots()
+        sys.exit(0)
+
+    if args.activate_default:
+        if not is_root():
+            sys.exit(1)
+        m = Manager(debug=debug)
+        m.activate_default_subvolume()
         sys.exit(0)
 
     if args.activate_snapshot:

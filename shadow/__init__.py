@@ -8,6 +8,7 @@ from datetime import date, datetime
 import shutil
 import logging
 import commands
+import tempfile
 
 __AUTHOR__ = 'Evan Hazlett <ejhazlett@gmail.com>'
 __VERSION__ = '0.3'
@@ -109,6 +110,34 @@ class Shadow(object):
         Activates a snapshot for next boot
 
         """
+        if snapshot_id == 0:
+            # boot default (root) subvolume
+            mounts = commands.getoutput('mount').split('\n')
+            rootfs_mount = None
+            for m in mounts:
+                if m.find(' / ') > -1:
+                    rootfs_mount = m
+                    break
+            if not rootfs_mount:
+                self.log.error("Unable to find rootfs mount.  Can't activate default volume.")
+                return
+            root_dev = rootfs_mount.split()[0]
+            # mount default subvolume to a temp location to activate volume
+            tmp_dir = tempfile.mkdtemp()
+            p = subprocess.Popen(['mount -t btrfs -o subvolid=0 {0} {1}'.format(root_dev, tmp_dir)], shell=True)
+            p.wait()
+            # activate default volume
+            p = subprocess.Popen(['btrfs subvolume set-default 0 {0}'.format(tmp_dir)], shell=True)
+            p.wait()
+            # unmount and cleanup
+            p = subprocess.Popen(['umount {0}'.format(tmp_dir)], shell=True)
+            ret_code = p.wait()
+            if ret_code == 0:
+                shutil.rmtree(tmp_dir)
+            else:
+                self.log.warn('Unable to unmount {0}'.format(tmp_dir))
+            self.log.info('Default subvolume activated.')
+            return
         if os.path.exists(os.path.join(self._snap_dir, snapshot_id)):
             vol_id = self._find_btrfs_vol_id(snapshot_id)
             if not vol_id:
