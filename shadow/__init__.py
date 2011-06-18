@@ -9,6 +9,9 @@ import shutil
 import logging
 import commands
 
+__AUTHOR__ = 'Evan Hazlett <ejhazlett@gmail.com>'
+__VERSION__ = '0.3'
+
 def find_os_version():
     os_ver = platform.linux_distribution()
     if os_ver[0] != '':
@@ -55,6 +58,13 @@ class Shadow(object):
             self.log.error('Only root filesystems on btrfs are supported')
             return False
 
+    def _find_btrfs_vol_id(self, snapshot_id):
+        vols = commands.getoutput('btrfs subvolume list {0}'.format(self._rootfs_dir)).split('\n')
+        for v in vols:
+            if v.find(snapshot_id) > -1:
+                return v.split()[1]
+        return None
+
     def _gather_snapshots(self):
         if os.path.exists(self._snap_dir):
             self._snapshots = os.listdir(self._snap_dir)
@@ -100,8 +110,12 @@ class Shadow(object):
 
         """
         if os.path.exists(os.path.join(self._snap_dir, snapshot_id)):
+            vol_id = self._find_btrfs_vol_id(snapshot_id)
+            if not vol_id:
+                self.log.error('Unable to find snapshot.  Make sure you are not currently running in a snapshot.')
+                return
             self.log.info('Activating snapshot {0} from {1}'.format(snapshot_id, self._snap_dir[1:]))
-            p = subprocess.Popen(['btrfs subvolume set-default {0} {1} 2>&1 > /dev/null'.format(os.path.join(self._snap_dir[1:], snapshot_id), self._rootfs_dir)], shell=True)
+            p = subprocess.Popen(['btrfs subvolume set-default {0} {1} 2>&1 > /dev/null'.format(vol_id, self._rootfs_dir)], shell=True)
             p.wait()
         kernel_found = False
         for k in os.listdir(self._kernel_dir):

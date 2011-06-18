@@ -4,6 +4,7 @@ import os
 import sys
 import subprocess
 import argparse
+import shadow
 from shadow import Shadow
 import logging
 
@@ -52,6 +53,9 @@ def is_root():
         logging.error('You must be root')
         return False
 
+def get_version():
+    return 'Shadow {0}'.format(shadow.__VERSION__)
+
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Volume management for btrfs')
     parser.add_argument('--rootfs-dir', dest='rootfs_dir', help="Path to root fs")
@@ -60,6 +64,7 @@ if __name__=='__main__':
     parser.add_argument('--activate-snapshot', dest='activate_snapshot', help="Activate snapshot (reboot required)")
     parser.add_argument('--remove-snapshot', dest='remove_snapshot', help="Remove snapshot")
     parser.add_argument('--debug', action='store_true', help="Output debug information")
+    parser.add_argument('--version', action='store_true', help="Show version")
     
     args = parser.parse_args()
     
@@ -67,6 +72,10 @@ if __name__=='__main__':
         debug = True
     else:
         debug = False
+
+    if args.version:
+        print(get_version())
+        sys.exit(0)
 
     if args.list_snapshots:
         m = Manager(debug=debug)
