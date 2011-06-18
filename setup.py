@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
+import sys
+
+if sys.version_info < (2,7):
+    REQUIRES = ['argparse']
+else:
+    REQUIRES = []
 
 setup(name='shadow',
-    version = '0.1',
+    version = '0.2',
     author = 'Evan Hazlett',
     author_email = 'ejhazlett@gmail.com',
     packages = ['shadow'],
@@ -15,7 +21,7 @@ setup(name='shadow',
     """,
     download_url = 'https://github.com/ehazlett/shadow/tarball/master',
     scripts = ['shadowconsole'],
-    #install_requires = ['httplib2','paramiko'],
+    install_requires = REQUIRES,
     platforms = [
         "All",
         ],

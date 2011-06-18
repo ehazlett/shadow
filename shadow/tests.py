@@ -15,7 +15,7 @@ class ShadowTest(unittest.TestCase):
         self.kernel_dir = os.path.join(self.tmp_dir, 'boot')
         self.rootfs_dir = os.path.join(self.tmp_dir, 'rootfs')
         self.snap_dir = os.path.join(self.tmp_dir, 'shadow')
-        self.shadow = Shadow(rootfs_dir=self.rootfs_dir, kernel_dir=self.kernel_dir, snap_dir=self.snap_dir)
+        self.shadow = Shadow(rootfs_dir=self.rootfs_dir, kernel_dir=self.kernel_dir, snapshot_dir=self.snap_dir)
         self.timestamp = self.shadow._get_timestamp()
         os.makedirs(self.kernel_dir)
         os.makedirs(self.rootfs_dir)
