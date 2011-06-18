@@ -100,8 +100,8 @@ class Shadow(object):
 
         """
         if os.path.exists(os.path.join(self._snap_dir, snapshot_id)):
-            self.log.info('Activating snapshot {0} from {1}'.format(snapshot_id, self._snap_dir))
-            p = subprocess.Popen(['btrfs subvolume set-default {0} {1} 2>&1 > /dev/null'.format(os.path.join(self._snap_dir, snapshot_id), self._rootfs_dir)], shell=True)
+            self.log.info('Activating snapshot {0} from {1}'.format(snapshot_id, self._snap_dir[1:]))
+            p = subprocess.Popen(['btrfs subvolume set-default {0} {1} 2>&1 > /dev/null'.format(os.path.join(self._snap_dir[1:], snapshot_id), self._rootfs_dir)], shell=True)
             p.wait()
         kernel_found = False
         for k in os.listdir(self._kernel_dir):
@@ -112,7 +112,7 @@ class Shadow(object):
             self.log.info('Activating kernel/initrd snapshot for {0}'.format(snapshot_id))
             for f in os.listdir(self._kernel_dir):
                 if f.find(snapshot_id) > -1:
-                    shutil.move(os.path.join(self._kernel_dir, f), os.path.join(self._kernel_dir, '{0}'.format(f.replace('.{0}'.format(snapshot_id), ''))))
+                    shutil.copy(os.path.join(self._kernel_dir, f), os.path.join(self._kernel_dir, '{0}'.format(f.replace('.{0}'.format(snapshot_id), ''))))
 
     def _snap_kernels(self, timestamp=None):
         """
