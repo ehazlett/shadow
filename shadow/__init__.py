@@ -136,14 +136,16 @@ class Shadow(object):
                 shutil.rmtree(tmp_dir)
             else:
                 self.log.warn('Unable to unmount {0}'.format(tmp_dir))
-            self.log.info('Default subvolume activated.')
+            self.log.info('Default subvolume set as active.  Reboot to activate.')
             return
+        snapshot_found = False
         if os.path.exists(os.path.join(self._snap_dir, snapshot_id)):
+            snapshot_found = True
             vol_id = self._find_btrfs_vol_id(snapshot_id)
             if not vol_id:
                 self.log.error('Unable to find snapshot.  Make sure you are not currently running in a snapshot.')
                 return
-            self.log.info('Activating snapshot {0} from {1}'.format(snapshot_id, self._snap_dir[1:]))
+            self.log.debug('Activating snapshot {0} from {1}'.format(snapshot_id, self._snap_dir[1:]))
             p = subprocess.Popen(['btrfs subvolume set-default {0} {1} 2>&1 > /dev/null'.format(vol_id, self._rootfs_dir)], shell=True)
             p.wait()
         kernel_found = False
@@ -152,10 +154,12 @@ class Shadow(object):
                 kernel_found = True
                 break
         if kernel_found:
-            self.log.info('Activating kernel/initrd snapshot for {0}'.format(snapshot_id))
+            self.log.debug('Activating kernel/initrd snapshot for {0}'.format(snapshot_id))
             for f in os.listdir(self._kernel_dir):
                 if f.find(snapshot_id) > -1:
                     shutil.copy(os.path.join(self._kernel_dir, f), os.path.join(self._kernel_dir, '{0}'.format(f.replace('.{0}'.format(snapshot_id), ''))))
+        if snapshot_found:
+            self.log.info('Snapshot {0} set as default.  Reboot to activate.'.format(snapshot_id))
 
     def _snap_kernels(self, timestamp=None):
         """
