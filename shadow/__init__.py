@@ -11,7 +11,7 @@ import commands
 import tempfile
 
 __AUTHOR__ = 'Evan Hazlett <ejhazlett@gmail.com>'
-__VERSION__ = '0.3'
+__VERSION__ = '0.31'
 
 def find_os_version():
     os_ver = platform.linux_distribution()
@@ -122,6 +122,9 @@ class Shadow(object):
                 self.log.error("Unable to find rootfs mount.  Can't activate default volume.")
                 return
             root_dev = rootfs_mount.split()[0]
+            # check for 'mount-by-disk-label'
+            if root_dev.find('[') > -1:
+                root_dev = root_dev.split('[')[0]
             # mount default subvolume to a temp location to activate volume
             tmp_dir = tempfile.mkdtemp()
             p = subprocess.Popen(['mount -t btrfs -o subvolid=0 {0} {1}'.format(root_dev, tmp_dir)], shell=True)
