@@ -11,7 +11,7 @@ import commands
 import tempfile
 
 __AUTHOR__ = 'Evan Hazlett <ejhazlett@gmail.com>'
-__VERSION__ = '0.31'
+__VERSION__ = '0.32'
 
 def find_os_version():
     os_ver = platform.linux_distribution()
