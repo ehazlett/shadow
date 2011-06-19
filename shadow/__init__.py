@@ -3,15 +3,21 @@
 #
 
 import os
+import sys
 import subprocess
 from datetime import date, datetime
+import time
 import shutil
 import logging
 import commands
 import tempfile
+try:
+    import json
+except ImportError:
+    import simplejson as json
 
 __AUTHOR__ = 'Evan Hazlett <ejhazlett@gmail.com>'
-__VERSION__ = '0.34'
+__VERSION__ = '0.35'
 
 def find_os_version():
     os_ver = platform.linux_distribution()
@@ -38,9 +44,21 @@ class Shadow(object):
         self._gather_snapshots()
 
     def get_snapshots(self):
+        """
+        Lists snapshots and creation dates
+
+        """
         self.log.debug('Getting snapshots from {0}'.format(self._snap_dir))
-        return self._gather_snapshots()
-        
+        snapshots = []
+        for s in self._gather_snapshots():
+            metadata = self._get_metadata(s)
+            if metadata:
+                d = datetime.fromtimestamp(metadata['created'])
+                snapshots.append(' {0} ({1})'.format(s, d.ctime()))
+            else:
+                snapshots.append(' {0}'.format(s))
+        return snapshots
+
     def _check_root_filesystem(self):
         """
         Checks root filesystem for compatibility
@@ -72,17 +90,50 @@ class Shadow(object):
     def _gather_snapshots(self):
         if os.path.exists(self._snap_dir):
             self._snapshots = os.listdir(self._snap_dir)
+            for s in self._snapshots:
+                if s.find('-metadata') > -1:
+                    self._snapshots.pop(self._snapshots.index(s))
         return self._snapshots
 
     @staticmethod
     def _get_timestamp():
         return datetime.strftime(datetime.now(), '%Y%m%d%H%M')
 
+    def _create_metadata(self, snapshot_id):
+        self.log.debug('Creating metadata for {0}'.format(snapshot_id))
+        info_file = os.path.join(self._snap_dir, '.{0}-metadata'.format(snapshot_id))
+        # metadata
+        data = {}
+        data['created'] = time.mktime(datetime.now().timetuple())
+        data['name'] = snapshot_id
+        data['shadow_version'] = __VERSION__
+        # create metadata file 
+        f = open(info_file, 'w')
+        f.write(json.dumps(data))
+        f.close()
+
+    def _get_metadata(self, snapshot_id):
+        self.log.debug('Getting metadata for {0}'.format(snapshot_id))
+        info_file = os.path.join(self._snap_dir, '.{0}-metadata'.format(snapshot_id))
+        data = None
+        if os.path.exists(info_file):
+            f = open(info_file, 'r')
+            data = json.loads(f.read())
+            f.close()
+        return data
+        
+    def _remove_metadata(self, snapshot_id):
+        info_file = os.path.join(self._snap_dir, '.{0}-metadata'.format(snapshot_id))
+        if os.path.exists(info_file):
+            self.log.debug('Removing metadata for {0}'.format(snapshot_id))
+            os.remove(info_file)
+
     def clear_snapshots(self):
         for s in self._snapshots:
             self.log.debug('Removing snapshot {0} from {1}'.format(s, self._snap_dir))
             p = subprocess.Popen(['btrfs subvolume delete {0} 2>&1 > /dev/null'.format(os.path.join(self._snap_dir, s))], shell=True)
             p.wait()
+            self._remove_metadata(s)
             self.log.debug('Removing kernel/initrd snapshot for {0}'.format(s))
             p = subprocess.Popen(['find {0} -name "*{1}" -delete'.format(self._kernel_dir, s)], shell=True)
             p.wait()
@@ -107,6 +158,7 @@ class Shadow(object):
             self.log.info('Removing kernel/initrd snapshot for {0}'.format(snapshot_id))
             p = subprocess.Popen(['find {0} -name "*{1}" -delete'.format(self._kernel_dir, snapshot_id)], shell=True)
             p.wait()
+        self._remove_metadata(snapshot_id)
 
     def _mount_vol(self, vol=None, vol_id=None, path=None):
         """
@@ -238,7 +290,7 @@ class Shadow(object):
         """
         if not name:
             name = self._get_timestamp()
-        snaps = self.get_snapshots()
+        snaps = self._gather_snapshots()
         #[shutil.copy(os.path.join(self._kernel_dir, k), os.path.join(self._kernel_dir, '{0}.{1}'.format(k, timestamp)))\
         #    for k in os.listdir(self._kernel_dir) if k.split('.')[-1] not in snaps and k.find('kernel') > -1 or k.find('vmlinuz') > -1\
         #    or k.find('initrd') > -1]
@@ -270,7 +322,9 @@ class Shadow(object):
             if ret_code != 0:
                 self.log.error('Error creating root fs snapshot.  Check syslog')
             else:
-                self.log.debug('Creating snapshot for root fs: {0}'.format(name))
+                self.log.debug('Created snapshot for root fs: {0}'.format(name))
+            # metadata
+            self._create_metadata(name)
 
     def take_snapshot(self, name=None):
         """

@@ -2,7 +2,7 @@
 
 Shadow is a snapshot management utility for the btrfs filesystem.  You can use it in 
 tandem with package managers (such as pacman for Arch linux) to provide restore 
-snapshots (similar to what Yum does for Fedora).
+snapshots (similar to what Yum does in Fedora with btrfs).
 
 ** btrfs on / is required
 

@@ -3,13 +3,15 @@
 from distutils.core import setup
 import sys
 
-if sys.version_info < (2,7):
+if sys.version_info < (2,6):
+    REQUIRES = ['argparse', 'simplejson']
+elif sys.version_info < (2,7):
     REQUIRES = ['argparse']
 else:
     REQUIRES = []
 
 setup(name='shadow',
-    version = '0.34',
+    version = '0.35',
     author = 'Evan Hazlett',
     author_email = 'ejhazlett@gmail.com',
     packages = ['shadow'],
@@ -17,7 +19,9 @@ setup(name='shadow',
     url = 'http://github.com/ehazlett/shadow',
     license = 'License :: OSI Approved :: GNU General Public License (GPL)',
     long_description = """
-    Shadow is a snapshot management utility for btrfs
+    Shadow is a snapshot management utility for the btrfs filesystem.  You can use it in 
+    tandem with package managers (such as pacman for Arch linux) to provide restore 
+    snapshots (similar to what yum does in Fedora with btrfs).
     """,
     download_url = 'https://github.com/ehazlett/shadow/tarball/master',
     scripts = ['shadowconsole'],
