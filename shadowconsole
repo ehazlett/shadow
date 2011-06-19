@@ -29,9 +29,9 @@ class Manager(object):
         self.shadow = Shadow(rootfs_dir=rootfs_dir, kernel_dir=kernel_dir, snapshot_dir=snapshot_dir, debug=debug)
         self.log = logging.getLogger('manager')
 
-    def do_snapshot(self):
+    def do_snapshot(self, name=None):
         self.log.debug('Taking snapshot')
-        snap_id = self.shadow.take_snapshot()
+        snap_id = self.shadow.take_snapshot(name=name)
 
     def list_snapshots(self):
         snaps = self.shadow.get_snapshots()
@@ -69,6 +69,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Volume management for btrfs')
     parser.add_argument('--rootfs-dir', dest='rootfs_dir', help="Path to root fs")
     parser.add_argument('--snapshot', action='store_true', help="Take a snapshot of the current kernels and filesystem")
+    parser.add_argument('--name', dest='snapshot_name', help="Optional name to use when creating snapshot")
     parser.add_argument('--list-snapshots', action='store_true', help="List all snapshots")
     parser.add_argument('--activate-snapshot', dest='activate_snapshot', help="Activate snapshot (reboot required)")
     parser.add_argument('--activate-default', action='store_true', help="Activate default (root) subvolume (no snapshots -- reboot required)")
@@ -138,7 +139,10 @@ if __name__=='__main__':
             m = Manager(rootfs_dir=args.rootfs_dir, debug=debug)
         else:
             m = Manager(debug=debug)
-        m.do_snapshot()
+        if args.snapshot_name:
+            m.do_snapshot(name=args.snapshot_name)
+        else:
+            m.do_snapshot()
         sys.exit(0)
 
     # no args; show help

@@ -38,6 +38,10 @@ Create a snapshot:
 
 shadowconsole --snapshot
 
+Create a snapshot with name:
+
+shadowconsole --snapshot --name mysnapshot
+
 
 Activate a snapshot:
 

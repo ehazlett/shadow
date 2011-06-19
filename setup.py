@@ -9,7 +9,7 @@ else:
     REQUIRES = []
 
 setup(name='shadow',
-    version = '0.33',
+    version = '0.34',
     author = 'Evan Hazlett',
     author_email = 'ejhazlett@gmail.com',
     packages = ['shadow'],

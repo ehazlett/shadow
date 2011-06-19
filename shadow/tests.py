@@ -55,6 +55,23 @@ class ShadowTest(unittest.TestCase):
         p = Popen(['btrfs subvolume delete {0} 2>&1 > /dev/null'.format(self.rootfs_dir)], shell=True)
         p.wait()
 
+    @unittest.skipIf(os.geteuid() != 0, "You must be root to test btrfs snapshots")
+    def test_snapshot_custom_name(self):
+        if os.path.exists(self.rootfs_dir):
+            shutil.rmtree(self.rootfs_dir)
+        # create the test subvolume
+        p = Popen(['btrfs subvolume create {0} 2>&1 > /dev/null'.format(self.rootfs_dir)], shell=True)
+        p.wait()
+        # snapshot
+        self.shadow._snap_rootfs(name='testsnapshot')
+        self.assertNotEqual(len(self.shadow.get_snapshots()), 0)
+        self.assertTrue(os.path.exists(os.path.join(self.snap_dir, 'testsnapshot')))
+        self.shadow.clear_snapshots()
+        self.assertEqual(len(self.shadow.get_snapshots()), 0)
+        # remove test subvolume
+        p = Popen(['btrfs subvolume delete {0} 2>&1 > /dev/null'.format(self.rootfs_dir)], shell=True)
+        p.wait()
+
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
 

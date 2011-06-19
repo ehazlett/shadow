@@ -11,7 +11,7 @@ import commands
 import tempfile
 
 __AUTHOR__ = 'Evan Hazlett <ejhazlett@gmail.com>'
-__VERSION__ = '0.33'
+__VERSION__ = '0.34'
 
 def find_os_version():
     os_ver = platform.linux_distribution()
@@ -231,13 +231,13 @@ class Shadow(object):
         self._unmount_vol(target_tmp)
         self.log.info('Merging complete')
 
-    def _snap_kernels(self, timestamp=None):
+    def _snap_kernels(self, name=None):
         """
         Takes a snapshot of the system kernels and ramdisks
 
         """
-        if not timestamp:
-            timestamp = self._get_timestamp()
+        if not name:
+            name = self._get_timestamp()
         snaps = self.get_snapshots()
         #[shutil.copy(os.path.join(self._kernel_dir, k), os.path.join(self._kernel_dir, '{0}.{1}'.format(k, timestamp)))\
         #    for k in os.listdir(self._kernel_dir) if k.split('.')[-1] not in snaps and k.find('kernel') > -1 or k.find('vmlinuz') > -1\
@@ -252,39 +252,39 @@ class Shadow(object):
             if not snap_exists:
                 if k.find('kernel') > -1 or k.find('vmlinuz') > -1 or k.find('initrd') > -1:
                     # filter existing snapshots -- if snapshot is created immediately after another
-                    if k.find(timestamp) == -1:
-                        self.log.debug('Creating snapshot for kernel or initrd: {0}.{1}'.format(k, timestamp))
-                        shutil.copy(os.path.join(self._kernel_dir, k), os.path.join(self._kernel_dir, '{0}.{1}'.format(k, timestamp)))
+                    if k.find(name) == -1:
+                        self.log.debug('Creating snapshot for kernel or initrd: {0}.{1}'.format(k, name))
+                        shutil.copy(os.path.join(self._kernel_dir, k), os.path.join(self._kernel_dir, '{0}.{1}'.format(k, name)))
 
-    def _snap_rootfs(self, timestamp=None):
+    def _snap_rootfs(self, name=None):
         """
         Takes a snapshot of the root filesystem (if supported)
 
         """
-        if not timestamp:
-            timestamp = self._get_timestamp()
+        if not name:
+            name = self._get_timestamp()
         if self._check_root_filesystem():
-            cmd = 'btrfs subvolume snapshot {0} {1}/{2} 2>&1 > /dev/null'.format(self._rootfs_dir, self._snap_dir, timestamp)
+            cmd = 'btrfs subvolume snapshot {0} {1}/{2} 2>&1 > /dev/null'.format(self._rootfs_dir, self._snap_dir, name)
             p = subprocess.Popen([cmd], shell=True)
             ret_code = p.wait()
             if ret_code != 0:
                 self.log.error('Error creating root fs snapshot.  Check syslog')
             else:
-                self.log.debug('Creating snapshot for root fs: {0}'.format(timestamp))
+                self.log.debug('Creating snapshot for root fs: {0}'.format(name))
 
-    def take_snapshot(self, timestamp=None):
+    def take_snapshot(self, name=None):
         """
         Takes a system snapshot (kernels and root fs)
 
         """
-        if not timestamp:
-            timestamp = self._get_timestamp()
+        if not name:
+            name = self._get_timestamp()
         # snapshot kernels/initrds
-        self._snap_kernels(timestamp=timestamp)
+        self._snap_kernels(name=name)
         # snapshot root fs (/)
-        self._snap_rootfs(timestamp=timestamp)
+        self._snap_rootfs(name=name)
         # reload snapshots
         self._gather_snapshots()
-        self.log.info('Created snapshot {0}'.format(timestamp))
-        return timestamp
+        self.log.info('Created snapshot {0}'.format(name))
+        return (name, datetime.now().isoformat()) 
 
