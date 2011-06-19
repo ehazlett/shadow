@@ -54,13 +54,13 @@ Merge a snapshot:
 
 shadowconsole --merge-snapshot <src_snapshot_id>:<target_snapshot_id>
 
-i.e.:  shadowconsole --merge-snapshot 201106192000:201106192130
+i.e.:  shadowconsole --merge-snapshot testing:base
 
 
 Remove a snapshot:
 
 shadowconsole --remove-snapshot <snapshot_id>
 
-i.e.: shadowconsole --remove-snapshot 201106192000
+i.e.: shadowconsole --remove-snapshot testing
 
 
