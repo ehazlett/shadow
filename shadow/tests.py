@@ -19,7 +19,8 @@ class ShadowTest(unittest.TestCase):
         self.timestamp = self.shadow._get_timestamp()
         os.makedirs(self.kernel_dir)
         os.makedirs(self.rootfs_dir)
-        os.makedirs(self.snap_dir)
+        if not os.path.exists(self.snap_dir):
+            os.makedirs(self.snap_dir)
         # preload some test "kernels" and "ramdisks"
         for x in ['kernel26.img', 'vmlinuz26', 'initrd.img-2.6.38', 'vmlinuz.2.6.38']:
             f = open(os.path.join(self.kernel_dir, x), 'w')
@@ -32,6 +33,10 @@ class ShadowTest(unittest.TestCase):
     def test_snapshot_kernels(self):
         self.shadow._snap_kernels()
         self.assertNotEqual(len(os.listdir(self.kernel_dir)), 0)
+        num_files = len(os.listdir(self.kernel_dir))
+        # perform another snapshot to make sure that duplicates aren't generated
+        self.shadow._snap_kernels()
+        self.assertEqual(len(os.listdir(self.kernel_dir)), num_files)
 
     @unittest.skipIf(os.geteuid() != 0, "You must be root to test btrfs snapshots")
     def test_snapshot_rootfs(self):

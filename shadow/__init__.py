@@ -139,6 +139,7 @@ class Shadow(object):
                 shutil.rmtree(tmp_dir)
             else:
                 self.log.warn('Unable to unmount {0}'.format(tmp_dir))
+            # TODO: revert to 'default' kernel? how to track?
             self.log.info('Default subvolume set as active.  Reboot to activate.')
             return
         snapshot_found = False
@@ -171,11 +172,23 @@ class Shadow(object):
         """
         if not timestamp:
             timestamp = self._get_timestamp()
+        snaps = self.get_snapshots()
+        #[shutil.copy(os.path.join(self._kernel_dir, k), os.path.join(self._kernel_dir, '{0}.{1}'.format(k, timestamp)))\
+        #    for k in os.listdir(self._kernel_dir) if k.split('.')[-1] not in snaps and k.find('kernel') > -1 or k.find('vmlinuz') > -1\
+        #    or k.find('initrd') > -1]
         for k in os.listdir(self._kernel_dir):
             # find kernels
-            if k.find('kernel') > -1 or k.find('vmlinuz') > -1 or k.find('initrd') > -1:
-                self.log.debug('Creating snapshot for kernel or initrd: {0}.{1}'.format(k, timestamp))
-                shutil.copy(os.path.join(self._kernel_dir, k), os.path.join(self._kernel_dir, '{0}.{1}'.format(k, timestamp)))
+            snap_exists = False
+            for s in snaps:
+                if k.find(s) > -1:
+                    snap_exists = True
+                    break
+            if not snap_exists:
+                if k.find('kernel') > -1 or k.find('vmlinuz') > -1 or k.find('initrd') > -1:
+                    # filter existing snapshots -- if snapshot is created immediately after another
+                    if k.find(timestamp) == -1:
+                        self.log.debug('Creating snapshot for kernel or initrd: {0}.{1}'.format(k, timestamp))
+                        shutil.copy(os.path.join(self._kernel_dir, k), os.path.join(self._kernel_dir, '{0}.{1}'.format(k, timestamp)))
 
     def _snap_rootfs(self, timestamp=None):
         """
