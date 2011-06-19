@@ -17,7 +17,7 @@ except ImportError:
     import simplejson as json
 
 __AUTHOR__ = 'Evan Hazlett <ejhazlett@gmail.com>'
-__VERSION__ = '0.35'
+__VERSION__ = '0.36'
 
 def find_os_version():
     os_ver = platform.linux_distribution()
@@ -89,7 +89,11 @@ class Shadow(object):
 
     def _gather_snapshots(self):
         if os.path.exists(self._snap_dir):
-            self._snapshots = os.listdir(self._snap_dir)
+            snaps = commands.getoutput('btrfs subvolume list {0} | grep {1}'.format(\
+                self._rootfs_dir, self._snap_dir[1:])).split('\n')
+            self._snapshots = []
+            for s in snaps:
+                self._snapshots.append(s.split()[-1].split(self._snap_dir[1:])[-1].replace('/', ''))
             for s in self._snapshots:
                 if s.find('-metadata') > -1:
                     self._snapshots.pop(self._snapshots.index(s))

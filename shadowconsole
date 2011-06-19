@@ -91,6 +91,8 @@ if __name__=='__main__':
         sys.exit(0)
 
     if args.list_snapshots:
+        if not is_root():
+            sys.exit(1)
         m = Manager(debug=debug)
         m.list_snapshots()
         sys.exit(0)
