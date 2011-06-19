@@ -11,7 +11,7 @@ import commands
 import tempfile
 
 __AUTHOR__ = 'Evan Hazlett <ejhazlett@gmail.com>'
-__VERSION__ = '0.32'
+__VERSION__ = '0.33'
 
 def find_os_version():
     os_ver = platform.linux_distribution()
@@ -60,6 +60,9 @@ class Shadow(object):
             return False
 
     def _find_btrfs_vol_id(self, snapshot_id):
+        # don't lookup default (root) subvolume; simply return
+        if snapshot_id == 0 or snapshot_id == '0':
+            return 0
         vols = commands.getoutput('btrfs subvolume list {0}'.format(self._rootfs_dir)).split('\n')
         for v in vols:
             if v.find(snapshot_id) > -1:
@@ -105,6 +108,54 @@ class Shadow(object):
             p = subprocess.Popen(['find {0} -name "*{1}" -delete'.format(self._kernel_dir, snapshot_id)], shell=True)
             p.wait()
 
+    def _mount_vol(self, vol=None, vol_id=None, path=None):
+        """
+        Mounts a subvolume at the specified path
+
+        """
+        if not vol or vol_id == None or not path:
+            self.log.error('You must specify a vol, vol_id, and path')
+            return
+        p = subprocess.Popen(['mount -t btrfs -o subvolid={0} {1} {2}'.format(vol_id, vol, path)], shell=True)
+        p.wait()
+
+    def _unmount_vol(self, path=None):
+        """
+        Unmounts the volume at the specified path
+
+        """
+        if not path:
+            self.log.error('You must specify a path to unmount')
+            return False
+        # unmount and cleanup
+        p = subprocess.Popen(['umount {0}'.format(path)], shell=True)
+        ret_code = p.wait()
+        if ret_code != 0:
+            self.log.warn('Unable to unmount {0}'.format(path))
+            return False
+        else:
+            return True
+
+    def _find_root_dev(self):
+        """
+        Finds corresponding root device for root fs mount
+
+        """
+        mounts = commands.getoutput('mount').split('\n')
+        rootfs_mount = None
+        for m in mounts:
+            if m.find(' / ') > -1:
+                rootfs_mount = m
+                break
+        if not rootfs_mount:
+            # unable to find mount
+            return None
+        root_dev = rootfs_mount.split()[0]
+        # check for 'mount-by-disk-label'
+        if root_dev.find('[') > -1:
+            root_dev = root_dev.split('[')[0]
+        return root_dev
+
     def activate_snapshot(self, snapshot_id=None):
         """
         Activates a snapshot for next boot
@@ -112,33 +163,19 @@ class Shadow(object):
         """
         if snapshot_id == 0:
             # boot default (root) subvolume
-            mounts = commands.getoutput('mount').split('\n')
-            rootfs_mount = None
-            for m in mounts:
-                if m.find(' / ') > -1:
-                    rootfs_mount = m
-                    break
-            if not rootfs_mount:
-                self.log.error("Unable to find rootfs mount.  Can't activate default volume.")
+            root_dev = self._find_root_dev()
+            if not root_dev:
+                self.log.error('Unable to find root device.  Cannot activate default snapshot.')
                 return
-            root_dev = rootfs_mount.split()[0]
-            # check for 'mount-by-disk-label'
-            if root_dev.find('[') > -1:
-                root_dev = root_dev.split('[')[0]
             # mount default subvolume to a temp location to activate volume
             tmp_dir = tempfile.mkdtemp()
-            p = subprocess.Popen(['mount -t btrfs -o subvolid=0 {0} {1}'.format(root_dev, tmp_dir)], shell=True)
-            p.wait()
+            self._mount_vol(vol=root_dev, vol_id=0, path=tmp_dir)
             # activate default volume
             p = subprocess.Popen(['btrfs subvolume set-default 0 {0}'.format(tmp_dir)], shell=True)
             p.wait()
             # unmount and cleanup
-            p = subprocess.Popen(['umount {0}'.format(tmp_dir)], shell=True)
-            ret_code = p.wait()
-            if ret_code == 0:
+            if self._unmount_vol(tmp_dir):
                 shutil.rmtree(tmp_dir)
-            else:
-                self.log.warn('Unable to unmount {0}'.format(tmp_dir))
             # TODO: revert to 'default' kernel? how to track?
             self.log.info('Default subvolume set as active.  Reboot to activate.')
             return
@@ -164,6 +201,35 @@ class Shadow(object):
                     shutil.copy(os.path.join(self._kernel_dir, f), os.path.join(self._kernel_dir, '{0}'.format(f.replace('.{0}'.format(snapshot_id), ''))))
         if snapshot_found:
             self.log.info('Snapshot {0} set as default.  Reboot to activate.'.format(snapshot_id))
+
+    def merge_snapshot(self, source_snapshot=None, target_snapshot=None):
+        """
+        Merges two snapshots
+
+        """
+        if not source_snapshot or not target_snapshot:
+            self.log.error('You must specify a source_snapshot and target_snapshot')
+            return
+        # create dirs for mounts
+        source_tmp = tempfile.mkdtemp()
+        target_tmp = tempfile.mkdtemp()
+        root_dev = self._find_root_dev()
+        if not root_dev:
+            self.log.error('Unable to find root device.  Cannot merge snapshots.')
+            return
+        source_vol_id = self._find_btrfs_vol_id(source_snapshot)
+        self.log.debug('Source vol ID: {0}'.format(source_vol_id))
+        target_vol_id = self._find_btrfs_vol_id(target_snapshot)
+        self.log.debug('Target vol ID: {0}'.format(target_vol_id))
+        self._mount_vol(vol=root_dev, vol_id=source_vol_id, path=source_tmp)
+        self._mount_vol(vol=root_dev, vol_id=target_vol_id, path=target_tmp)
+        # merge
+        self.log.info('Merging {0} with {1}...'.format(source_snapshot, target_snapshot))
+        p = subprocess.Popen(['rsync -rlptgoxDEXA --exclude="/tmp*" --exclude="/proc/*" --exclude="/sys/*" --exclude="/dev/*" {0}/ {1}/'.format(source_tmp, target_tmp)], shell=True)
+        p.wait()
+        self._unmount_vol(source_tmp)
+        self._unmount_vol(target_tmp)
+        self.log.info('Merging complete')
 
     def _snap_kernels(self, timestamp=None):
         """

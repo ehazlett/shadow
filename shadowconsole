@@ -49,6 +49,12 @@ class Manager(object):
     def remove_snapshot(self, snapshot_id=None):
         self.shadow.remove_snapshot(snapshot_id)
 
+    def clear_snapshots(self):
+        self.shadow.clear_snapshots()
+
+    def merge_snapshot(self, source=None, target=None):
+        self.shadow.merge_snapshot(source_snapshot=source, target_snapshot=target)
+
 def is_root():
     if os.geteuid() == 0:
         return True
@@ -66,7 +72,9 @@ if __name__=='__main__':
     parser.add_argument('--list-snapshots', action='store_true', help="List all snapshots")
     parser.add_argument('--activate-snapshot', dest='activate_snapshot', help="Activate snapshot (reboot required)")
     parser.add_argument('--activate-default', action='store_true', help="Activate default (root) subvolume (no snapshots -- reboot required)")
+    parser.add_argument('--merge-snapshot', dest='merge_snapshot', help="Merge a snapshot with another.  Format is src_snap:target_snap -- i.e. --merge-snapshot 201106181200:201106191000  --  target_snap can also be '0' for root subvolume")
     parser.add_argument('--remove-snapshot', dest='remove_snapshot', help="Remove snapshot")
+    parser.add_argument('--clear-snapshots', action='store_true', help="Remove all shadow snapshots")
     parser.add_argument('--debug', action='store_true', help="Output debug information")
     parser.add_argument('--version', action='store_true', help="Show version")
     
@@ -100,11 +108,26 @@ if __name__=='__main__':
         m.activate_snapshot(args.activate_snapshot)
         sys.exit(0)
 
+    if args.merge_snapshot:
+        if not is_root():
+            sys.exit(1)
+        m = Manager(debug=debug)
+        source, target = args.merge_snapshot.split(':')
+        m.merge_snapshot(source, target)
+        sys.exit(0)
+
     if args.remove_snapshot:
         if not is_root():
             sys.exit(1)
         m = Manager(debug=debug)
         m.remove_snapshot(args.remove_snapshot)
+        sys.exit(0)
+
+    if args.clear_snapshots:
+        if not is_root():
+            sys.exit(1)
+        m = Manager(debug=debug)
+        m.clear_snapshots()
         sys.exit(0)
 
     if args.snapshot:
