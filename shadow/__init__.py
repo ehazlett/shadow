@@ -17,7 +17,7 @@ except ImportError:
     import simplejson as json
 
 __AUTHOR__ = 'Evan Hazlett <ejhazlett@gmail.com>'
-__VERSION__ = '0.37'
+__VERSION__ = '0.38'
 
 def find_os_version():
     os_ver = platform.linux_distribution()
