@@ -34,10 +34,11 @@ class Shadow(object):
         self._rootfs_dir = rootfs_dir
         self._snap_dir = snapshot_dir
         self._snapshots = None
+        log_format = '%(levelname)-2s: %(message)s'
         if debug:
-            logging.basicConfig(level=logging.DEBUG)
+            logging.basicConfig(level=logging.DEBUG, format=log_format)
         else:
-            logging.basicConfig(level=logging.INFO)
+            logging.basicConfig(level=logging.INFO, format=log_format)
         if not os.path.exists(self._snap_dir):
             os.makedirs(self._snap_dir)
         # gather snapshots
