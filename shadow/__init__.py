@@ -17,7 +17,7 @@ except ImportError:
     import simplejson as json
 
 __AUTHOR__ = 'Evan Hazlett <ejhazlett@gmail.com>'
-__VERSION__ = '0.38'
+__VERSION__ = '0.39'
 
 def find_os_version():
     os_ver = platform.linux_distribution()
@@ -58,6 +58,7 @@ class Shadow(object):
                 snapshots.append(' {0} ({1})'.format(s, d.ctime()))
             else:
                 snapshots.append(' {0}'.format(s))
+        snapshots.reverse()
         return snapshots
 
     def _check_root_filesystem(self):

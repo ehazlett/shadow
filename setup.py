@@ -11,7 +11,7 @@ else:
     REQUIRES = []
 
 setup(name='shadow',
-    version = '0.38',
+    version = '0.39',
     author = 'Evan Hazlett',
     author_email = 'ejhazlett@gmail.com',
     packages = ['shadow'],
